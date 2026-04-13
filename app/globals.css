@@ -2,26 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer components {
+  .btn-water {
+    @apply relative isolate w-full overflow-hidden rounded-2xl px-4 py-3 text-sm font-semibold;
+    @apply text-neutral-900;
+    @apply bg-white/55;
+    @apply shadow-[0_18px_50px_-35px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.55)];
+    @apply ring-1 ring-inset ring-neutral-900/10;
+    @apply backdrop-blur-md;
+    @apply transition active:translate-y-px active:bg-white/45 active:shadow-[0_12px_35px_-32px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.45)];
   }
-}
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
+  .btn-water::before {
+    content: "";
+    @apply pointer-events-none absolute inset-0 opacity-100;
+    background:
+      radial-gradient(120% 80% at 25% 10%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.0) 55%),
+      radial-gradient(120% 90% at 70% 120%, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.0) 55%);
+  }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .btn-water::after {
+    content: "";
+    @apply pointer-events-none absolute -inset-8 opacity-0 transition-opacity duration-300;
+    background: radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 60%);
+  }
+
+  .btn-water:hover::after {
+    opacity: 1;
+  }
+
+  .btn-water:focus-visible {
+    @apply outline-none ring-2 ring-sky-400/70 ring-offset-2 ring-offset-white;
+  }
+
+  .input-underline {
+    @apply w-full bg-transparent py-2.5 text-neutral-900 outline-none;
+    @apply border-b border-neutral-300 focus:border-neutral-900;
+    @apply placeholder:text-neutral-400;
   }
 }
