@@ -1,5 +1,21 @@
 import Link from "next/link";
 
+function AuthBrand() {
+  return (
+    <Link
+      href="/"
+      className="inline-flex items-center gap-3 text-sm font-medium text-neutral-900"
+    >
+      <img
+        src="/brand/logo.png"
+        alt="Calar logo"
+        className="h-8 w-auto max-w-[160px] object-contain"
+      />
+      <span className="font-mono uppercase tracking-[0.18em]">Calar OS</span>
+    </Link>
+  );
+}
+
 export function AuthSplitLayout({
   title,
   subtitle,
@@ -16,15 +32,7 @@ export function AuthSplitLayout({
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-10">
         <aside className="hidden flex-col justify-between bg-neutral-100 p-10 lg:col-span-6 lg:flex">
           <div>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-sm font-medium text-neutral-900"
-            >
-              <span className="grid size-8 place-items-center rounded-lg bg-neutral-900 text-white">
-                c
-              </span>
-              <span>calar os</span>
-            </Link>
+            <AuthBrand />
           </div>
 
           <div className="max-w-md">
@@ -44,15 +52,7 @@ export function AuthSplitLayout({
         <main className="flex items-center justify-center bg-white px-6 py-12 lg:col-span-4">
           <div className="w-full max-w-md">
             <div className="lg:hidden">
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 text-sm font-medium text-neutral-900"
-              >
-                <span className="grid size-8 place-items-center rounded-lg bg-neutral-900 text-white">
-                  c
-                </span>
-                <span>calar os</span>
-              </Link>
+              <AuthBrand />
             </div>
 
             <div className="mt-10 lg:mt-0">{children}</div>

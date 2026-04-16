@@ -58,8 +58,14 @@ export default function LoginPage() {
 
   return (
     <AuthSplitLayout
-      title="Calar os, simplified."
-      subtitle="Sign in to see your leads, visits, and attribution in one clean dashboard."
+      title={
+        <>
+          <span className="font-mono text-[0.85em] tracking-[0.08em] whitespace-nowrap">
+            Calar Operating System
+          </span>
+        </>
+      }
+      subtitle="Your client operating system for lead tracking, attribution, and campaign clarity."
     >
       <h2 className="text-2xl font-semibold tracking-tight text-neutral-900">
         Sign in
