@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { ArrowDown, ArrowUp, FileText, Users } from "lucide-react";
+import { ArrowRight, FileText, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { SESSION_COOKIE_NAME, verifySignedSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { tenantUsers } from "@/lib/db/schema";
+import { DashboardHeader } from "@/components/DashboardHeader";
 
 /** TEMP: set false to require session + real data again. */
 const DASHBOARD_DEV_BYPASS = true;
@@ -59,7 +60,10 @@ export default async function DashboardPage() {
   }
 
   const [userRow] = await db
-    .select({ email: tenantUsers.email })
+    .select({
+      email: tenantUsers.email,
+      displayName: tenantUsers.displayName,
+    })
     .from(tenantUsers)
     .where(
       and(
@@ -97,7 +101,11 @@ export default async function DashboardPage() {
     monthLeadCount = leads.filter((l) => isThisMonth(l.created_at)).length;
   }
 
-  const displayName = greetingNameFromEmail(userRow.email);
+  const trimmedProfileName = userRow.displayName?.trim();
+  const displayName =
+    trimmedProfileName && trimmedProfileName.length > 0
+      ? trimmedProfileName
+      : greetingNameFromEmail(userRow.email);
 
   return (
     <DashboardShell displayName={displayName} monthLeadCount={monthLeadCount} />
@@ -121,29 +129,7 @@ function DashboardShell({
   return (
     <div className={`min-h-screen ${DASH_BG_CLASS} font-sans antialiased`}>
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-8 pb-4 pt-14">
-        <header>
-          <div className="inline-flex -translate-x-16 items-center gap-2 rounded-full bg-neutral-200/90 p-1.5 text-[13px] text-neutral-700 shadow-sm sm:-translate-x-24 lg:-translate-x-32">
-            <details className="group relative">
-              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full bg-white px-3 py-1.5 font-medium text-neutral-800 shadow-sm marker:content-none [&::-webkit-details-marker]:hidden">
-                <span>Portal</span>
-                <span className="text-neutral-500" aria-hidden>
-                  ▾
-                </span>
-              </summary>
-              <div className="absolute left-0 top-full z-20 mt-2 w-max origin-top-left rounded-2xl border border-white/55 bg-white/55 p-1.5 shadow-[0_18px_50px_-30px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-[opacity,transform] duration-300 ease-out will-change-transform opacity-0 translate-y-[-10px] scale-[0.96] pointer-events-none group-open:pointer-events-auto group-open:opacity-100 group-open:translate-y-0 group-open:scale-100">
-                <form action="/api/auth/logout" method="post">
-                  <button
-                    type="submit"
-                    className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-neutral-900 transition active:translate-y-px hover:bg-white/60"
-                  >
-                    Sign out
-                  </button>
-                </form>
-              </div>
-            </details>
-            <span className="pr-3 text-neutral-800">Dashboard</span>
-          </div>
-        </header>
+        <DashboardHeader />
 
         <main className="flex min-h-0 flex-1 flex-col">
           <div className="flex w-full shrink-0 flex-col justify-center min-h-[calc(100vh-8rem)]">
@@ -175,7 +161,7 @@ function DashboardShell({
                   </span>
                   <span className="flex-1" />
                   <div className="flex items-end">
-                    <ArrowUp
+                    <ArrowRight
                       className={`${ARROW_SIZE_CLASS} ${ICON_CLASS}`}
                       strokeWidth={1.5}
                       aria-hidden
@@ -193,7 +179,7 @@ function DashboardShell({
                   </span>
                   <span className="flex-1" />
                   <div className="flex items-end">
-                    <ArrowDown
+                    <TrendingUp
                       className={`${ARROW_SIZE_CLASS} ${ICON_CLASS}`}
                       strokeWidth={1.5}
                       aria-hidden

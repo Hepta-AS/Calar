@@ -9,20 +9,33 @@ import {
 /** TEMP: set false to require auth on /dashboard again. */
 const DASHBOARD_DEV_BYPASS = true;
 
+const ADMIN_PREFIX = "/a8k3x";
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isDashboard =
     pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+  const isAdmin =
+    pathname === ADMIN_PREFIX || pathname.startsWith(ADMIN_PREFIX + "/");
   const isLogin = pathname === "/login" || pathname === "/login/";
   const isRegister = pathname === "/register" || pathname === "/register/";
 
-  if (!isDashboard && !isLogin && !isRegister) {
+  if (!isDashboard && !isAdmin && !isLogin && !isRegister) {
     return NextResponse.next();
   }
 
   const raw = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const session = raw ? await verifySignedSession(raw) : null;
+
+  if (isAdmin) {
+    if (!session && !DASHBOARD_DEV_BYPASS) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
 
   if (isDashboard) {
     if (!session && !DASHBOARD_DEV_BYPASS) {
