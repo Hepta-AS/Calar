@@ -52,19 +52,26 @@ function parseBody(data: unknown): {
 }
 
 export async function POST(request: Request) {
+  console.log("[REGISTER] Request received");
+
   let body: unknown;
   try {
     body = await request.json();
-  } catch {
+    console.log("[REGISTER] Body parsed:", { email: (body as Record<string, unknown>)?.email });
+  } catch (e) {
+    console.log("[REGISTER] Invalid JSON:", e);
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const parsed = parseBody(body);
   if (!parsed) {
+    console.log("[REGISTER] Invalid body format");
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
   const { email, password } = parsed;
+  console.log("[REGISTER] Attempting registration for:", email);
+
   const DEFAULT_TENANT_SLUG = process.env.DEFAULT_TENANT_SLUG ?? "default";
   const DEFAULT_TENANT_NAME = process.env.DEFAULT_TENANT_NAME ?? "Calar";
 
@@ -82,8 +89,10 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (existingTenant) {
+      console.log("[REGISTER] Using existing tenant:", existingTenant.id);
       tenantId = existingTenant.id;
     } else {
+      console.log("[REGISTER] Creating new tenant:", DEFAULT_TENANT_SLUG);
       const [tenantRow] = await db
         .insert(tenants)
         .values({
@@ -94,9 +103,11 @@ export async function POST(request: Request) {
         .returning({ id: tenants.id });
 
       if (!tenantRow) {
+        console.log("[REGISTER] Failed to create tenant");
         return NextResponse.json({ error: "Create failed" }, { status: 500 });
       }
 
+      console.log("[REGISTER] Tenant created:", tenantRow.id);
       tenantId = tenantRow.id;
     }
 
@@ -107,12 +118,14 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (existingUser) {
+      console.log("[REGISTER] Email already exists:", email);
       return NextResponse.json(
         { error: "Email already registered" },
         { status: 409 },
       );
     }
 
+    console.log("[REGISTER] Creating user...");
     const [userRow] = await db
       .insert(tenantUsers)
       .values({
@@ -123,11 +136,14 @@ export async function POST(request: Request) {
       .returning({ id: tenantUsers.id });
 
     if (!userRow) {
+      console.log("[REGISTER] Failed to create user");
       return NextResponse.json({ error: "Create failed" }, { status: 500 });
     }
 
+    console.log("[REGISTER] User created:", userRow.id);
     userId = userRow.id;
   } catch (error) {
+    console.log("[REGISTER] Database error:", error);
     if (isUniqueViolation(error)) {
       return NextResponse.json(
         { error: "Email already registered" },
@@ -137,9 +153,12 @@ export async function POST(request: Request) {
     throw error;
   }
 
+  console.log("[REGISTER] Creating session...");
   const exp = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
   const payload = { userId, tenantId, exp };
   const token = await createSignedSession(payload);
+
+  console.log("[REGISTER] Success! User:", userId, "Tenant:", tenantId);
 
   const res = NextResponse.json({ userId, tenantId }, { status: 201 });
   res.cookies.set({

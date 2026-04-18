@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { leads, tenants } from "@/lib/db/schema";
+import { processLeadIntelligence } from "@/lib/intelligence";
 
 export const runtime = "nodejs";
 
@@ -97,12 +98,23 @@ export async function POST(request: Request) {
     );
   }
 
-  await db.insert(leads).values({
+  const [newLead] = await db
+    .insert(leads)
+    .values({
+      tenantId: tenant.id,
+      visitorId: parsed.visitorId,
+      email: parsed.email,
+      name: parsed.name,
+      company: parsed.company,
+    })
+    .returning({ id: leads.id });
+
+  // Trigger intelligence processing asynchronously (don't block response)
+  processLeadIntelligence({
+    leadId: newLead.id,
     tenantId: tenant.id,
-    visitorId: parsed.visitorId,
-    email: parsed.email,
-    name: parsed.name,
-    company: parsed.company,
+  }).catch((error) => {
+    console.error(`Intelligence processing failed for lead ${newLead.id}:`, error);
   });
 
   return new NextResponse(null, { status: 200, headers: corsHeaders });
