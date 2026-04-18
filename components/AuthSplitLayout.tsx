@@ -22,7 +22,7 @@ export function AuthSplitLayout({
   children,
   footer,
 }: {
-  title: string;
+  title: React.ReactNode;
   subtitle: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
