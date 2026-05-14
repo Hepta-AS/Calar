@@ -40,7 +40,8 @@ function parseBody(data: unknown): {
 }
 
 export async function POST(request: Request) {
-  console.log("[LOGIN] Request received");
+  console.log("[LOGIN] ========== Login request started ==========");
+  console.log("[LOGIN] Timestamp:", new Date().toISOString());
 
   let body: unknown;
   try {
@@ -53,32 +54,51 @@ export async function POST(request: Request) {
 
   const parsed = parseBody(body);
   if (!parsed) {
-    console.log("[LOGIN] Invalid body format");
+    console.log("[LOGIN] Invalid body format - parsed result is null");
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
   const { email, password } = parsed;
   console.log("[LOGIN] Attempting login for:", email);
+  console.log("[LOGIN] Password length:", password.length);
 
-  const [row] = await db
-    .select({
-      userId: tenantUsers.id,
-      passwordHash: tenantUsers.passwordHash,
-      tenantId: tenants.id,
-    })
-    .from(tenantUsers)
-    .innerJoin(tenants, eq(tenantUsers.tenantId, tenants.id))
-    .where(eq(tenantUsers.email, email))
-    .limit(1);
+  let row;
+  try {
+    console.log("[LOGIN] Querying database for user...");
+    const result = await db
+      .select({
+        userId: tenantUsers.id,
+        passwordHash: tenantUsers.passwordHash,
+        tenantId: tenants.id,
+        tenantName: tenants.name,
+      })
+      .from(tenantUsers)
+      .innerJoin(tenants, eq(tenantUsers.tenantId, tenants.id))
+      .where(eq(tenantUsers.email, email))
+      .limit(1);
+
+    row = result[0];
+    console.log("[LOGIN] Database query completed. Found:", row ? "yes" : "no");
+    if (row) {
+      console.log("[LOGIN] User details - userId:", row.userId, "tenantId:", row.tenantId, "tenant:", row.tenantName);
+    }
+  } catch (dbError) {
+    console.error("[LOGIN] Database error:", dbError);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
+  }
 
   if (!row) {
-    console.log("[LOGIN] User not found:", email);
+    console.log("[LOGIN] User not found in database:", email);
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
   console.log("[LOGIN] User found, verifying password...");
+  console.log("[LOGIN] Stored hash length:", row.passwordHash?.length ?? 0);
 
-  if (!verifyPassword(password, row.passwordHash)) {
+  const passwordValid = verifyPassword(password, row.passwordHash);
+  console.log("[LOGIN] Password verification result:", passwordValid);
+
+  if (!passwordValid) {
     console.log("[LOGIN] Password verification failed for:", email);
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
@@ -89,19 +109,23 @@ export async function POST(request: Request) {
   const tenantId = row.tenantId;
   const exp = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
   const payload = { userId, tenantId, exp };
-  const token = await createSignedSession(payload);
 
-  console.log("[LOGIN] Session created for user:", userId, "tenant:", tenantId);
+  console.log("[LOGIN] Session payload:", { userId, tenantId, exp, expiresAt: new Date(exp * 1000).toISOString() });
+
+  const token = await createSignedSession(payload);
+  console.log("[LOGIN] Session token created, length:", token.length);
 
   const res = NextResponse.json({ userId, tenantId }, { status: 200 });
-  res.cookies.set({
+  const cookieOptions = {
     name: SESSION_COOKIE_NAME,
     value: token,
     ...baseSessionCookieOptions(),
     maxAge: sessionCookieMaxAge(payload),
-  });
+  };
+  console.log("[LOGIN] Setting cookie:", { name: cookieOptions.name, maxAge: cookieOptions.maxAge });
+  res.cookies.set(cookieOptions);
 
-  console.log("[LOGIN] Success! Cookie set, returning response");
+  console.log("[LOGIN] ========== Login successful ==========");
 
   return res;
 }
