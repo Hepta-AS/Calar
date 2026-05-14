@@ -44,11 +44,16 @@ export const tenants = pgTable("tenants", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
-  apiKey: text("api_key").notNull(),
+  apiKey: text("api_key"),
   logoUrl: text("logo_url"),
+  domain: text("domain"),
+  settings: jsonb("settings").$type<Record<string, unknown>>(),
+  plan: text("plan"),
+  isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const tenantUsers = pgTable("tenant_users", {
@@ -122,6 +127,69 @@ export const leads = pgTable("leads", {
   enrichedIndustry: text("enriched_industry"),
   enrichedEmployeeCount: text("enriched_employee_count"),
   enrichedAt: timestamp("enriched_at", { withTimezone: true }),
+  // Additional fields from database
+  ipAddress: text("ip_address"),
+  externalIds: jsonb("external_ids").$type<Record<string, string>>(),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  convertedAt: timestamp("converted_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+});
+
+export const visitors = pgTable("visitors", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id),
+  visitorId: text("visitor_id"),
+  visitorUuid: uuid("visitor_uuid"),
+  firstSeenAt: timestamp("first_seen_at", { withTimezone: true }),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+});
+
+export const attributions = pgTable("attributions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id),
+  visitorId: text("visitor_id"),
+  leadId: uuid("lead_id").references(() => leads.id),
+  utmSource: text("utm_source"),
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
+  utmContent: text("utm_content"),
+  utmTerm: text("utm_term"),
+  referrer: text("referrer"),
+  landingPage: text("landing_page"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  capturedAt: timestamp("captured_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const apiKeys = pgTable("api_keys", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id),
+  key: text("key"),
+  keyHash: text("key_hash"),
+  keyPrefix: text("key_prefix"),
+  name: text("name"),
+  status: text("status"),
+  scopes: jsonb("scopes").$type<string[]>(),
+  isActive: boolean("is_active").default(true),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

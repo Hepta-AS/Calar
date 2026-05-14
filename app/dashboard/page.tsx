@@ -10,7 +10,7 @@ import { tenantUsers } from "@/lib/db/schema";
 import { DashboardHeader } from "@/components/DashboardHeader";
 
 /** TEMP: set false to require session + real data again. */
-const DASHBOARD_DEV_BYPASS = true;
+const DASHBOARD_DEV_BYPASS = false;
 const FAKE_DISPLAY_NAME = "Jordan";
 const FAKE_MONTH_LEADS = 12;
 

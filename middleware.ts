@@ -7,7 +7,7 @@ import {
 } from "@/lib/auth/session";
 
 /** TEMP: set false to require auth on /dashboard again. */
-const DASHBOARD_DEV_BYPASS = true;
+const DASHBOARD_DEV_BYPASS = false;
 
 const ADMIN_PREFIX = "/a8k3x";
 
