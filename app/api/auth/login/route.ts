@@ -42,6 +42,9 @@ function parseBody(data: unknown): {
 export async function POST(request: Request) {
   console.log("[LOGIN] ========== Login request started ==========");
   console.log("[LOGIN] Timestamp:", new Date().toISOString());
+  console.log("[LOGIN] SESSION_SECRET set:", !!process.env.SESSION_SECRET);
+  console.log("[LOGIN] NODE_ENV:", process.env.NODE_ENV);
+  console.log("[LOGIN] Available env keys:", Object.keys(process.env).filter(k => !k.startsWith("npm_")).join(", "));
 
   let body: unknown;
   try {
