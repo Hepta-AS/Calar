@@ -46,10 +46,13 @@ export const tenants = pgTable("tenants", {
   slug: text("slug").notNull().unique(),
   apiKey: text("api_key"),
   logoUrl: text("logo_url"),
+  logoFileId: uuid("logo_file_id"),
   domain: text("domain"),
   settings: jsonb("settings").$type<Record<string, unknown>>(),
   plan: text("plan"),
   isActive: boolean("is_active").default(true),
+  isDeleted: boolean("is_deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -67,6 +70,9 @@ export const tenantUsers = pgTable("tenant_users", {
   isAdmin: boolean("is_admin").default(false).notNull(),
   smtpEmail: text("smtp_email"),
   reportNotifyEmail: text("report_notify_email"),
+  avatarFileId: uuid("avatar_file_id"),
+  isDeleted: boolean("is_deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -202,8 +208,11 @@ export const campaigns = pgTable("campaigns", {
     .references(() => tenants.id),
   name: text("name").notNull(),
   imageUrl: text("image_url"),
+  coverFileId: uuid("cover_file_id"),
   utmLink: text("utm_link"),
   spendingPerMonth: text("spending_per_month"),
+  isDeleted: boolean("is_deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -238,6 +247,30 @@ export const embeddings = pgTable("embeddings", {
   sourceText: text("source_text").notNull(),
   embedding: vector("embedding"),
   model: text("model").default("text-embedding-ada-002"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type FileCategory = "avatar" | "cover" | "upload";
+export type FileEntityType = "tenant" | "user" | "campaign";
+
+export const files = pgTable("files", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id),
+  filename: text("filename").notNull(),
+  originalFilename: text("original_filename").notNull(),
+  mimeType: text("mime_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  r2Key: text("r2_key").notNull().unique(),
+  category: text("category").notNull().$type<FileCategory>(), // 'avatar' | 'cover' | 'upload'
+  entityType: text("entity_type").$type<FileEntityType>(), // 'tenant' | 'user' | 'campaign'
+  entityId: uuid("entity_id"),
+  isDeleted: boolean("is_deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  uploadedBy: uuid("uploaded_by").references(() => tenantUsers.id),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
