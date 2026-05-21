@@ -14,6 +14,15 @@ const ADMIN_PREFIX = "/a8k3x";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Extensive logging for debugging
+  console.log("[MW] =====================================");
+  console.log("[MW] Timestamp:", new Date().toISOString());
+  console.log("[MW] Method:", request.method);
+  console.log("[MW] URL:", request.url);
+  console.log("[MW] Pathname:", pathname);
+  console.log("[MW] Headers:", JSON.stringify(Object.fromEntries(request.headers.entries())));
+  console.log("[MW] Cookies:", request.cookies.getAll().map(c => c.name).join(", ") || "(none)");
+
   const isDashboard =
     pathname === "/dashboard" || pathname.startsWith("/dashboard/");
   const isAdmin =
@@ -21,15 +30,20 @@ export async function middleware(request: NextRequest) {
   const isLogin = pathname === "/login" || pathname === "/login/";
   const isRegister = pathname === "/register" || pathname === "/register/";
 
+  console.log("[MW] Route checks:", { isDashboard, isAdmin, isLogin, isRegister });
+
   if (!isDashboard && !isAdmin && !isLogin && !isRegister) {
+    console.log("[MW] Decision: NEXT (not a protected route)");
     return NextResponse.next();
   }
 
   const raw = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const session = raw ? await verifySignedSession(raw) : null;
+  console.log("[MW] Session:", session ? `userId=${session.userId}` : "null");
 
   if (isAdmin) {
     if (!session && !DASHBOARD_DEV_BYPASS) {
+      console.log("[MW] Decision: REDIRECT to /login (admin, no session)");
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       url.search = "";
@@ -39,6 +53,7 @@ export async function middleware(request: NextRequest) {
 
   if (isDashboard) {
     if (!session && !DASHBOARD_DEV_BYPASS) {
+      console.log("[MW] Decision: REDIRECT to /login (dashboard, no session)");
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       url.search = "";
@@ -48,6 +63,7 @@ export async function middleware(request: NextRequest) {
 
   if (isLogin || isRegister) {
     if (session) {
+      console.log("[MW] Decision: REDIRECT to /dashboard (login/register, has session)");
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       url.search = "";
@@ -55,6 +71,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  console.log("[MW] Decision: NEXT (passed all checks)");
   return NextResponse.next();
 }
 

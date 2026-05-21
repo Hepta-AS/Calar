@@ -6,6 +6,11 @@ import { tenants, visits } from "@/lib/db/schema";
 
 export const runtime = "nodejs";
 
+// Extensive logging for debugging
+function log(...args: unknown[]) {
+  console.log("[CAPTURE/VISIT]", new Date().toISOString(), ...args);
+}
+
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -70,10 +75,17 @@ function parseBody(data: unknown): {
 }
 
 export async function POST(request: Request) {
+  log("========== REQUEST START ==========");
+  log("Method:", request.method);
+  log("URL:", request.url);
+  log("Headers:", JSON.stringify(Object.fromEntries(request.headers.entries())));
+
   let body: unknown;
   try {
     body = await request.json();
-  } catch {
+    log("Body parsed:", JSON.stringify(body));
+  } catch (e) {
+    log("JSON parse error:", e);
     return NextResponse.json(
       { error: "Invalid JSON" },
       { status: 400, headers: corsHeaders },
@@ -82,36 +94,55 @@ export async function POST(request: Request) {
 
   const parsed = parseBody(body);
   if (!parsed) {
+    log("Body validation failed");
     return NextResponse.json(
       { error: "Invalid body" },
       { status: 400, headers: corsHeaders },
     );
   }
 
-  const [tenant] = await db
-    .select({ id: tenants.id })
-    .from(tenants)
-    .where(eq(tenants.apiKey, parsed.apiKey))
-    .limit(1);
+  log("Parsed body:", { visitorId: parsed.visitorId, url: parsed.url, apiKeyPrefix: parsed.apiKey.slice(0, 10) + "..." });
 
-  if (!tenant) {
+  try {
+    log("Looking up tenant by API key...");
+    const [tenant] = await db
+      .select({ id: tenants.id })
+      .from(tenants)
+      .where(eq(tenants.apiKey, parsed.apiKey))
+      .limit(1);
+
+    if (!tenant) {
+      log("Tenant not found for API key");
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: corsHeaders },
+      );
+    }
+
+    log("Tenant found:", tenant.id);
+    log("Inserting visit...");
+
+    await db.insert(visits).values({
+      tenantId: tenant.id,
+      visitorId: parsed.visitorId,
+      url: parsed.url,
+      referrer: parsed.referrer,
+      utmSource: parsed.utmSource,
+      utmMedium: parsed.utmMedium,
+      utmCampaign: parsed.utmCampaign,
+      utmContent: parsed.utmContent,
+      utmTerm: parsed.utmTerm,
+    });
+
+    log("Visit inserted successfully");
+    log("========== REQUEST END (200) ==========");
+    return new NextResponse(null, { status: 200, headers: corsHeaders });
+  } catch (e) {
+    log("Database error:", e);
+    log("========== REQUEST END (500) ==========");
     return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401, headers: corsHeaders },
+      { error: "Database error" },
+      { status: 500, headers: corsHeaders },
     );
   }
-
-  await db.insert(visits).values({
-    tenantId: tenant.id,
-    visitorId: parsed.visitorId,
-    url: parsed.url,
-    referrer: parsed.referrer,
-    utmSource: parsed.utmSource,
-    utmMedium: parsed.utmMedium,
-    utmCampaign: parsed.utmCampaign,
-    utmContent: parsed.utmContent,
-    utmTerm: parsed.utmTerm,
-  });
-
-  return new NextResponse(null, { status: 200, headers: corsHeaders });
 }
