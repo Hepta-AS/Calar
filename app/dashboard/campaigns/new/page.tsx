@@ -29,6 +29,7 @@ export default function NewCampaignPage() {
   }
 
   async function handleSave() {
+    console.log("[NEW CAMPAIGN] Save clicked, selectedFile:", selectedFile?.name);
     if (!name.trim()) {
       setError("Name is required");
       return;
@@ -37,6 +38,7 @@ export default function NewCampaignPage() {
     setError(null);
     try {
       // 1. Create campaign first
+      console.log("[NEW CAMPAIGN] Creating campaign...");
       const res = await fetch("/api/dashboard/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,19 +49,23 @@ export default function NewCampaignPage() {
           spending_per_month: spending.trim() || null,
         }),
       });
+      console.log("[NEW CAMPAIGN] Create response status:", res.status);
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as {
           error?: string;
         };
+        console.error("[NEW CAMPAIGN] Create failed:", data);
         setError(data.error ?? "Save failed");
         return;
       }
 
       const data = (await res.json()) as { campaign: { id: string } };
       const campaignId = data.campaign.id;
+      console.log("[NEW CAMPAIGN] Campaign created:", campaignId);
 
       // 2. Upload image to R2 if selected
       if (selectedFile) {
+        console.log("[NEW CAMPAIGN] Uploading image to R2...");
         const formData = new FormData();
         formData.append("file", selectedFile);
         formData.append("category", "campaign-cover");
@@ -70,11 +76,16 @@ export default function NewCampaignPage() {
           credentials: "include",
           body: formData,
         });
+        console.log("[NEW CAMPAIGN] Upload response status:", uploadRes.status);
 
         if (!uploadRes.ok) {
-          // Campaign created but image upload failed - still redirect
-          console.error("Image upload failed");
+          const uploadData = await uploadRes.json().catch(() => ({}));
+          console.error("[NEW CAMPAIGN] Upload failed:", uploadData);
+        } else {
+          console.log("[NEW CAMPAIGN] Upload successful!");
         }
+      } else {
+        console.log("[NEW CAMPAIGN] No file selected, skipping upload");
       }
 
       router.push("/dashboard/campaigns");
