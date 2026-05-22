@@ -50,7 +50,6 @@ type OverviewLead = {
 type OverviewResponse = {
   leads: OverviewLead[];
   by_channel: { utm_source: string; count: number }[];
-  visits: OverviewVisit[];
   visit_stats: {
     total_visits: number;
     unique_visitors: number;
