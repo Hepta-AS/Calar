@@ -5,7 +5,7 @@ import { SESSION_COOKIE_NAME, verifySignedSession } from "@/lib/auth/session";
 import { DashboardHeader } from "@/components/DashboardHeader";
 
 /** TEMP: set false to require session + real data again. Must match app/dashboard/page.tsx. */
-const DASHBOARD_DEV_BYPASS = true;
+const DASHBOARD_DEV_BYPASS = false;
 
 /** Mirrors `DashboardShell` tokens in app/dashboard/page.tsx */
 const DASH_BG_CLASS = "bg-[#F6F6F6]";
