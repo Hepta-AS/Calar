@@ -25,7 +25,6 @@ export default function EditCampaignPage() {
 
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<string | null>(null);
-  const [coverFileId, setCoverFileId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [spending, setSpending] = useState("");
   const [utmLink, setUtmLink] = useState("");
@@ -46,7 +45,6 @@ export default function EditCampaignPage() {
         setName(c.name);
         setUtmLink(c.utm_link ?? "");
         setSpending(c.spending_per_month ?? "");
-        setCoverFileId(c.cover_file_id);
 
         // If there's a cover file, get the signed URL
         if (c.cover_file_id) {
@@ -100,9 +98,7 @@ export default function EditCampaignPage() {
         setError(data.error ?? "Upload failed");
         return;
       }
-
-      const data = (await res.json()) as { file: { id: string } };
-      setCoverFileId(data.file.id);
+      // File uploaded successfully - coverFileId is automatically set on the campaign
     } catch {
       setError("Failed to upload image");
     } finally {
