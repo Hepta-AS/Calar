@@ -12,6 +12,7 @@ export default function NewCampaignPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [name, setName] = useState("");
   const [spending, setSpending] = useState("");
   const [utmLink, setUtmLink] = useState("");
@@ -21,6 +22,7 @@ export default function NewCampaignPage() {
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setSelectedFile(file);
     const reader = new FileReader();
     reader.onload = () => setPreview(reader.result as string);
     reader.readAsDataURL(file);
@@ -34,13 +36,13 @@ export default function NewCampaignPage() {
     setSaving(true);
     setError(null);
     try {
+      // 1. Create campaign first
       const res = await fetch("/api/dashboard/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
           name: name.trim(),
-          image_url: preview,
           utm_link: utmLink.trim() || null,
           spending_per_month: spending.trim() || null,
         }),
@@ -52,6 +54,29 @@ export default function NewCampaignPage() {
         setError(data.error ?? "Save failed");
         return;
       }
+
+      const data = (await res.json()) as { campaign: { id: string } };
+      const campaignId = data.campaign.id;
+
+      // 2. Upload image to R2 if selected
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        formData.append("category", "campaign-cover");
+        formData.append("campaign_id", campaignId);
+
+        const uploadRes = await fetch("/api/v1/files/upload", {
+          method: "POST",
+          credentials: "include",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          // Campaign created but image upload failed - still redirect
+          console.error("Image upload failed");
+        }
+      }
+
       router.push("/dashboard/campaigns");
       router.refresh();
     } catch {

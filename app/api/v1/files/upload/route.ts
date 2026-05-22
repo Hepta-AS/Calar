@@ -34,18 +34,24 @@ const VALID_CATEGORIES = new Set<UploadCategory>([
 ]);
 
 export async function POST(request: Request) {
+  console.log("[FILES UPLOAD] Request received");
+
   // Authenticate user via session cookie
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
 
   if (!sessionCookie?.value) {
+    console.log("[FILES UPLOAD] No session cookie");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const session = await verifySignedSession(sessionCookie.value);
   if (!session) {
+    console.log("[FILES UPLOAD] Invalid session");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  console.log("[FILES UPLOAD] User authenticated:", session.userId);
 
   const { userId, tenantId } = session;
 
@@ -98,6 +104,7 @@ export async function POST(request: Request) {
 
   // Validate campaign belongs to tenant if provided
   if (campaignId) {
+    console.log("[FILES UPLOAD] Looking up campaign:", campaignId);
     const [campaign] = await db
       .select({ id: campaigns.id })
       .from(campaigns)
@@ -111,11 +118,13 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (!campaign) {
+      console.log("[FILES UPLOAD] Campaign not found for tenant");
       return NextResponse.json(
         { error: "Campaign not found" },
         { status: 404 }
       );
     }
+    console.log("[FILES UPLOAD] Campaign found");
   }
 
   // Check file size
@@ -204,10 +213,12 @@ export async function POST(request: Request) {
   }
 
   // Upload to R2
+  console.log("[FILES UPLOAD] Uploading to R2, key:", r2Key);
   try {
     await uploadToR2(r2Key, Buffer.from(buffer), mimeType);
+    console.log("[FILES UPLOAD] R2 upload successful");
   } catch (error) {
-    console.error("[FILES] R2 upload error:", error);
+    console.error("[FILES UPLOAD] R2 upload error:", error);
     return NextResponse.json(
       { error: "Failed to upload file" },
       { status: 500 }
