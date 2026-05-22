@@ -28,6 +28,7 @@ export default function EditCampaignPage() {
   const [spending, setSpending] = useState("");
   const [utmLink, setUtmLink] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadCampaign = useCallback(async () => {
@@ -94,6 +95,35 @@ export default function EditCampaignPage() {
       setError("Something went wrong");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm("Er du sikker på at du vil slette denne kampanjen?")) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/dashboard/campaigns", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id: campaignId }),
+      });
+      if (!res.ok && res.status !== 204) {
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setError(data.error ?? "Delete failed");
+        return;
+      }
+      router.push("/dashboard/campaigns");
+      router.refresh();
+    } catch {
+      setError("Something went wrong");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -245,14 +275,24 @@ export default function EditCampaignPage() {
                       <p className="text-sm text-red-600">{error}</p>
                     )}
 
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="mt-2 w-max rounded-md bg-neutral-900 px-5 py-2 text-[13px] font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50"
-                    >
-                      {saving ? "Saving..." : "Save"}
-                    </button>
+                    <div className="mt-2 flex gap-3">
+                      <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={saving || deleting}
+                        className="w-max rounded-md bg-neutral-900 px-5 py-2 text-[13px] font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50"
+                      >
+                        {saving ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={saving || deleting}
+                        className="w-max rounded-md bg-red-600 px-5 py-2 text-[13px] font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {deleting ? "Sletter..." : "Slett"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </section>

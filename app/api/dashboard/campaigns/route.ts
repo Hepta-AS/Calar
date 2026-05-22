@@ -206,3 +206,45 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ campaign: campaignJson(row) });
 }
+
+export async function DELETE(request: Request) {
+  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
+  const session = token ? await verifySignedSession(token) : null;
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (body === null || typeof body !== "object") {
+    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+  }
+
+  const o = body as Record<string, unknown>;
+  const id = typeof o.id === "string" ? o.id.trim() : "";
+
+  if (!id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+
+  const [deleted] = await db
+    .delete(campaigns)
+    .where(
+      and(
+        eq(campaigns.id, id),
+        eq(campaigns.tenantId, session.tenantId),
+      ),
+    )
+    .returning({ id: campaigns.id });
+
+  if (!deleted) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  return new NextResponse(null, { status: 204 });
+}
