@@ -82,6 +82,7 @@ function campaignJson(r: {
   id: string;
   name: string;
   imageUrl: string | null;
+  coverFileId: string | null;
   utmLink: string | null;
   spendingPerMonth: string | null;
   createdAt: Date;
@@ -90,6 +91,7 @@ function campaignJson(r: {
     id: r.id,
     name: r.name,
     image_url: r.imageUrl,
+    cover_file_id: r.coverFileId,
     utm_link: r.utmLink,
     spending_per_month: r.spendingPerMonth,
     created_at: r.createdAt.toISOString(),
@@ -100,6 +102,7 @@ const SELECT_FIELDS = {
   id: campaigns.id,
   name: campaigns.name,
   imageUrl: campaigns.imageUrl,
+  coverFileId: campaigns.coverFileId,
   utmLink: campaigns.utmLink,
   spendingPerMonth: campaigns.spendingPerMonth,
   createdAt: campaigns.createdAt,

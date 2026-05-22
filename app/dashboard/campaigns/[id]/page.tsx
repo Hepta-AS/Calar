@@ -12,6 +12,7 @@ type Campaign = {
   id: string;
   name: string;
   image_url: string | null;
+  cover_file_id: string | null;
   utm_link: string | null;
   spending_per_month: string | null;
 };
@@ -24,11 +25,13 @@ export default function EditCampaignPage() {
 
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<string | null>(null);
+  const [coverFileId, setCoverFileId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [spending, setSpending] = useState("");
   const [utmLink, setUtmLink] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadCampaign = useCallback(async () => {
@@ -41,9 +44,23 @@ export default function EditCampaignPage() {
       const c = data.campaigns.find((x) => x.id === campaignId);
       if (c) {
         setName(c.name);
-        setPreview(c.image_url);
         setUtmLink(c.utm_link ?? "");
         setSpending(c.spending_per_month ?? "");
+        setCoverFileId(c.cover_file_id);
+
+        // If there's a cover file, get the signed URL
+        if (c.cover_file_id) {
+          const urlRes = await fetch(`/api/v1/files/${c.cover_file_id}/url`, {
+            credentials: "include",
+          });
+          if (urlRes.ok) {
+            const urlData = (await urlRes.json()) as { url: string };
+            setPreview(urlData.url);
+          }
+        } else if (c.image_url) {
+          // Fallback to legacy image_url
+          setPreview(c.image_url);
+        }
       }
     } finally {
       setLoading(false);
@@ -54,17 +71,52 @@ export default function EditCampaignPage() {
     loadCampaign();
   }, [loadCampaign]);
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Show local preview immediately
     const reader = new FileReader();
     reader.onload = () => setPreview(reader.result as string);
     reader.readAsDataURL(file);
+
+    // Upload to R2
+    setUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("category", "campaign-cover");
+      formData.append("campaign_id", campaignId);
+
+      const res = await fetch("/api/v1/files/upload", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(data.error ?? "Upload failed");
+        return;
+      }
+
+      const data = (await res.json()) as { file: { id: string } };
+      setCoverFileId(data.file.id);
+    } catch {
+      setError("Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleSave() {
     if (!name.trim()) {
       setError("Name is required");
+      return;
+    }
+    if (uploading) {
+      setError("Please wait for image upload to complete");
       return;
     }
     setSaving(true);
@@ -77,7 +129,6 @@ export default function EditCampaignPage() {
         body: JSON.stringify({
           id: campaignId,
           name: name.trim(),
-          image_url: preview,
           utm_link: utmLink.trim() || null,
           spending_per_month: spending.trim() || null,
         }),
@@ -194,12 +245,13 @@ export default function EditCampaignPage() {
                       <span
                         className={`text-[13px] font-medium ${HERO_TEXT_CLASS}`}
                       >
-                        Upload Image
+                        Upload Image {uploading && <span className="text-neutral-500">(laster opp...)</span>}
                       </span>
                       <button
                         type="button"
                         onClick={() => fileRef.current?.click()}
-                        className="mt-1 flex h-10 w-16 items-center justify-center rounded-lg bg-neutral-200/80 text-neutral-600 transition hover:bg-neutral-300/80"
+                        disabled={uploading}
+                        className="mt-1 flex h-10 w-16 items-center justify-center rounded-lg bg-neutral-200/80 text-neutral-600 transition hover:bg-neutral-300/80 disabled:opacity-50"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -279,7 +331,7 @@ export default function EditCampaignPage() {
                       <button
                         type="button"
                         onClick={handleSave}
-                        disabled={saving || deleting}
+                        disabled={saving || deleting || uploading}
                         className="w-max rounded-md bg-neutral-900 px-5 py-2 text-[13px] font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50"
                       >
                         {saving ? "Saving..." : "Save"}
@@ -287,7 +339,7 @@ export default function EditCampaignPage() {
                       <button
                         type="button"
                         onClick={handleDelete}
-                        disabled={saving || deleting}
+                        disabled={saving || deleting || uploading}
                         className="w-max rounded-md bg-red-600 px-5 py-2 text-[13px] font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
                       >
                         {deleting ? "Sletter..." : "Slett"}
