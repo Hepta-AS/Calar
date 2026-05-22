@@ -15,7 +15,6 @@ const HERO_TEXT_CLASS = "text-[#363636]";
 const PLACEHOLDER_IMG_CLASS = "bg-[#D4D4D4]";
 
 const INSIGHT_CARD_W_CLASS = "w-full max-w-[1010px]";
-const INSIGHT_CARD_H_CLASS = "h-[430px]";
 
 const STATIC_CAMPAIGNS = [
   {
@@ -46,14 +45,6 @@ type OverviewLead = {
   utm_source: string | null;
   utm_medium: string | null;
   utm_campaign: string | null;
-};
-
-type OverviewVisit = {
-  id: string;
-  url: string;
-  referrer: string | null;
-  utm_source: string | null;
-  created_at: string;
 };
 
 type OverviewResponse = {
@@ -184,7 +175,6 @@ export default async function OverviewPage() {
   );
   let visitStats = { total_visits: 0, unique_visitors: 0, visits_this_month: 0, visitors_this_month: 0 };
   let topPages: { url: string; views: number }[] = [];
-  let recentVisits: OverviewVisit[] = [];
 
   if (!DASHBOARD_DEV_BYPASS) {
     const token = cookies().get(SESSION_COOKIE_NAME)?.value;
@@ -219,7 +209,6 @@ export default async function OverviewPage() {
       highlighted = derived.length > 0 ? derived : [{ name: "Campaigns", lines: ["No campaign-tagged leads this month yet.", "Add utm_campaign on your links to see breakdowns here."] }];
       visitStats = data.visit_stats ?? visitStats;
       topPages = data.top_pages ?? [];
-      recentVisits = data.visits ?? [];
     }
   }
 

@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { ArrowRight, Eye, FileText, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, FileText, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
