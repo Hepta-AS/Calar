@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { ArrowRight, FileText, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Eye, FileText, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -20,6 +20,12 @@ type OverviewLead = {
 
 type OverviewResponse = {
   leads: OverviewLead[];
+  visit_stats?: {
+    total_visits: number;
+    unique_visitors: number;
+    visits_this_month: number;
+    visitors_this_month: number;
+  };
 };
 
 function isThisMonth(iso: string): boolean {
@@ -49,7 +55,12 @@ export default async function DashboardPage() {
       : FAKE_DISPLAY_NAME;
     const monthLeadCount = FAKE_MONTH_LEADS;
     return (
-      <DashboardShell displayName={displayName} monthLeadCount={monthLeadCount} />
+      <DashboardShell
+        displayName={displayName}
+        monthLeadCount={monthLeadCount}
+        visitsThisMonth={0}
+        visitorsThisMonth={0}
+      />
     );
   }
 
@@ -95,10 +106,14 @@ export default async function DashboardPage() {
   }
 
   let monthLeadCount = 0;
+  let visitsThisMonth = 0;
+  let visitorsThisMonth = 0;
   if (res.ok) {
     const data = (await res.json()) as OverviewResponse;
     const leads = data.leads ?? [];
     monthLeadCount = leads.filter((l) => isThisMonth(l.created_at)).length;
+    visitsThisMonth = data.visit_stats?.visits_this_month ?? 0;
+    visitorsThisMonth = data.visit_stats?.visitors_this_month ?? 0;
   }
 
   const trimmedProfileName = userRow.displayName?.trim();
@@ -108,16 +123,25 @@ export default async function DashboardPage() {
       : greetingNameFromEmail(userRow.email);
 
   return (
-    <DashboardShell displayName={displayName} monthLeadCount={monthLeadCount} />
+    <DashboardShell
+      displayName={displayName}
+      monthLeadCount={monthLeadCount}
+      visitsThisMonth={visitsThisMonth}
+      visitorsThisMonth={visitorsThisMonth}
+    />
   );
 }
 
 function DashboardShell({
   displayName,
   monthLeadCount,
+  visitsThisMonth,
+  visitorsThisMonth,
 }: {
   displayName: string;
   monthLeadCount: number;
+  visitsThisMonth: number;
+  visitorsThisMonth: number;
 }) {
   const DASH_BG_CLASS = "bg-[#F6F6F6]";
   const CARD_BG_CLASS = "bg-[#EFEFEF]";
@@ -143,8 +167,12 @@ function DashboardShell({
               <p
                 className={`text-4xl font-light tracking-tight ${HERO_TEXT_CLASS}`}
               >
-                You have {monthLeadCount} new{" "}
-                {monthLeadCount === 1 ? "lead" : "leads"} this month.
+                {visitsThisMonth} {visitsThisMonth === 1 ? "visit" : "visits"} from {visitorsThisMonth} {visitorsThisMonth === 1 ? "visitor" : "visitors"} this month.
+              </p>
+              <p
+                className={`text-4xl font-light tracking-tight ${HERO_TEXT_CLASS}`}
+              >
+                {monthLeadCount} new {monthLeadCount === 1 ? "lead" : "leads"}.
               </p>
             </div>
 

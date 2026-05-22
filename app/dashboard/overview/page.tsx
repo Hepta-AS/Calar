@@ -48,9 +48,25 @@ type OverviewLead = {
   utm_campaign: string | null;
 };
 
+type OverviewVisit = {
+  id: string;
+  url: string;
+  referrer: string | null;
+  utm_source: string | null;
+  created_at: string;
+};
+
 type OverviewResponse = {
   leads: OverviewLead[];
   by_channel: { utm_source: string; count: number }[];
+  visits: OverviewVisit[];
+  visit_stats: {
+    total_visits: number;
+    unique_visitors: number;
+    visits_this_month: number;
+    visitors_this_month: number;
+  };
+  top_pages: { url: string; views: number }[];
 };
 
 function isThisMonth(iso: string): boolean {
@@ -166,6 +182,9 @@ export default async function OverviewPage() {
   let highlighted: { name: string; lines: string[] }[] = STATIC_CAMPAIGNS.map(
     (c) => ({ name: c.name, lines: [...c.lines] }),
   );
+  let visitStats = { total_visits: 0, unique_visitors: 0, visits_this_month: 0, visitors_this_month: 0 };
+  let topPages: { url: string; views: number }[] = [];
+  let recentVisits: OverviewVisit[] = [];
 
   if (!DASHBOARD_DEV_BYPASS) {
     const token = cookies().get(SESSION_COOKIE_NAME)?.value;
@@ -198,6 +217,9 @@ export default async function OverviewPage() {
       insightBody = buildInsightParagraph(leads);
       const derived = buildHighlightedFromLeads(leads);
       highlighted = derived.length > 0 ? derived : [{ name: "Campaigns", lines: ["No campaign-tagged leads this month yet.", "Add utm_campaign on your links to see breakdowns here."] }];
+      visitStats = data.visit_stats ?? visitStats;
+      topPages = data.top_pages ?? [];
+      recentVisits = data.visits ?? [];
     }
   }
 
@@ -222,17 +244,66 @@ export default async function OverviewPage() {
                 </p>
               </div>
 
-              <section aria-labelledby="insight-card-label" className="mt-16">
+              {/* Visit Stats Cards */}
+              <section aria-label="Traffic stats" className="mt-16">
+                <div className={`grid grid-cols-2 gap-4 sm:grid-cols-4 ${INSIGHT_CARD_W_CLASS}`}>
+                  <div className={`flex flex-col rounded-2xl p-6 shadow-sm ${CARD_BG_CLASS}`}>
+                    <p className={`text-[14px] font-normal ${CARD_TEXT_CLASS}`}>Visits this month</p>
+                    <p className={`text-[36px] font-light ${HERO_TEXT_CLASS}`}>{visitStats.visits_this_month}</p>
+                  </div>
+                  <div className={`flex flex-col rounded-2xl p-6 shadow-sm ${CARD_BG_CLASS}`}>
+                    <p className={`text-[14px] font-normal ${CARD_TEXT_CLASS}`}>Visitors this month</p>
+                    <p className={`text-[36px] font-light ${HERO_TEXT_CLASS}`}>{visitStats.visitors_this_month}</p>
+                  </div>
+                  <div className={`flex flex-col rounded-2xl p-6 shadow-sm ${CARD_BG_CLASS}`}>
+                    <p className={`text-[14px] font-normal ${CARD_TEXT_CLASS}`}>Total visits</p>
+                    <p className={`text-[36px] font-light ${HERO_TEXT_CLASS}`}>{visitStats.total_visits}</p>
+                  </div>
+                  <div className={`flex flex-col rounded-2xl p-6 shadow-sm ${CARD_BG_CLASS}`}>
+                    <p className={`text-[14px] font-normal ${CARD_TEXT_CLASS}`}>Unique visitors</p>
+                    <p className={`text-[36px] font-light ${HERO_TEXT_CLASS}`}>{visitStats.unique_visitors}</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Top Pages */}
+              {topPages.length > 0 && (
+                <section aria-labelledby="top-pages-label" className="mt-8">
+                  <div className={`flex flex-col rounded-2xl p-8 shadow-sm ${INSIGHT_CARD_W_CLASS} ${CARD_BG_CLASS}`}>
+                    <p
+                      id="top-pages-label"
+                      className={`text-[30px] font-normal leading-tight ${CARD_TEXT_CLASS}`}
+                    >
+                      Top pages
+                    </p>
+                    <ul className="mt-6 space-y-3">
+                      {topPages.slice(0, 5).map((page, idx) => (
+                        <li key={idx} className="flex items-center justify-between">
+                          <span className={`text-[16px] truncate max-w-[80%] ${HERO_TEXT_CLASS}`}>
+                            {page.url.replace(/^https?:\/\/[^/]+/, "") || "/"}
+                          </span>
+                          <span className={`text-[16px] font-medium ${CARD_TEXT_CLASS}`}>
+                            {page.views} {page.views === 1 ? "view" : "views"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </section>
+              )}
+
+              {/* Leads Insight */}
+              <section aria-labelledby="insight-card-label" className="mt-8">
                 <div
-                  className={`flex flex-col rounded-2xl p-8 shadow-sm ${INSIGHT_CARD_W_CLASS} ${INSIGHT_CARD_H_CLASS} ${CARD_BG_CLASS}`}
+                  className={`flex flex-col rounded-2xl p-8 shadow-sm ${INSIGHT_CARD_W_CLASS} ${CARD_BG_CLASS}`}
                 >
                   <p
                     id="insight-card-label"
                     className={`text-[30px] font-normal leading-tight ${CARD_TEXT_CLASS}`}
                   >
-                    Overview
+                    Leads insight
                   </p>
-                  <span className="flex-1" aria-hidden />
+                  <span className="mt-6" aria-hidden />
                   <p
                     className={`max-w-4xl text-[20px] font-normal leading-relaxed ${HERO_TEXT_CLASS}`}
                   >

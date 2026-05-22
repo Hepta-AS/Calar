@@ -84,8 +84,50 @@ export async function GET() {
     ORDER BY count DESC
   `);
 
+  // Get visits data
+  const visitsRaw = await db.execute(sql`
+    SELECT
+      id,
+      url,
+      referrer,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      created_at
+    FROM visits
+    WHERE tenant_id = ${tenantId}
+    ORDER BY created_at DESC
+    LIMIT 100
+  `);
+
+  const visitStatsRaw = await db.execute(sql`
+    SELECT
+      COUNT(*)::int AS total_visits,
+      COUNT(DISTINCT visitor_id)::int AS unique_visitors,
+      COUNT(*) FILTER (WHERE created_at >= date_trunc('month', CURRENT_DATE))::int AS visits_this_month,
+      COUNT(DISTINCT visitor_id) FILTER (WHERE created_at >= date_trunc('month', CURRENT_DATE))::int AS visitors_this_month
+    FROM visits
+    WHERE tenant_id = ${tenantId}
+  `);
+
+  const topPagesRaw = await db.execute(sql`
+    SELECT
+      url,
+      COUNT(*)::int AS views
+    FROM visits
+    WHERE tenant_id = ${tenantId}
+    GROUP BY url
+    ORDER BY views DESC
+    LIMIT 10
+  `);
+
   const leadRows = rowsFromExecute(leadsRaw);
   const channelRows = rowsFromExecute(channelRaw);
+  const visitRows = rowsFromExecute(visitsRaw);
+  const visitStatsRows = rowsFromExecute(visitStatsRaw);
+  const topPagesRows = rowsFromExecute(topPagesRaw);
+
+  const stats = visitStatsRows[0] || {};
 
   return NextResponse.json({
     leads: leadRows.map((row) => ({
@@ -101,6 +143,25 @@ export async function GET() {
     by_channel: channelRows.map((row) => ({
       utm_source: String(row.utm_source ?? ""),
       count: Number(row.count),
+    })),
+    visits: visitRows.map((row) => ({
+      id: String(row.id),
+      url: String(row.url ?? ""),
+      referrer: row.referrer == null ? null : String(row.referrer),
+      utm_source: row.utm_source == null ? null : String(row.utm_source),
+      utm_medium: row.utm_medium == null ? null : String(row.utm_medium),
+      utm_campaign: row.utm_campaign == null ? null : String(row.utm_campaign),
+      created_at: toIso(row.created_at),
+    })),
+    visit_stats: {
+      total_visits: Number(stats.total_visits ?? 0),
+      unique_visitors: Number(stats.unique_visitors ?? 0),
+      visits_this_month: Number(stats.visits_this_month ?? 0),
+      visitors_this_month: Number(stats.visitors_this_month ?? 0),
+    },
+    top_pages: topPagesRows.map((row) => ({
+      url: String(row.url ?? ""),
+      views: Number(row.views ?? 0),
     })),
   });
 }
