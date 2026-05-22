@@ -6,22 +6,13 @@ import { SESSION_COOKIE_NAME, verifySignedSession } from "@/lib/auth/session";
 import { DashboardHeader } from "@/components/DashboardHeader";
 
 /** TEMP: set false to require session + real data again. Must match app/dashboard/page.tsx. */
-const DASHBOARD_DEV_BYPASS = true;
+const DASHBOARD_DEV_BYPASS = false;
 
 const DASH_BG_CLASS = "bg-[#F6F6F6]";
 const CARD_BG_CLASS = "bg-[#EFEFEF]";
 const HERO_TEXT_CLASS = "text-[#363636]";
 const PLACEHOLDER_IMG_CLASS = "bg-[#D4D4D4]";
 const MUTED_CLASS = "text-neutral-500";
-
-const STATIC_CAMPAIGNS = [
-  "Shoe Campaign",
-  "Basketball Campaign",
-  "Golf Campaign",
-  "Women Tennis Campaign",
-  "Image Campaign",
-  "Tennis Campaign",
-].map((name, i) => ({ id: `static-${i}`, name, imageUrl: null as string | null }));
 
 type ApiCampaign = {
   id: string;
@@ -75,7 +66,7 @@ function CampaignCard({
 }
 
 export default async function CampaignsPage() {
-  let list = STATIC_CAMPAIGNS;
+  let list: { id: string; name: string; imageUrl: string | null }[] = [];
 
   if (!DASHBOARD_DEV_BYPASS) {
     const token = cookies().get(SESSION_COOKIE_NAME)?.value;
@@ -134,29 +125,46 @@ export default async function CampaignsPage() {
               </div>
 
               <section aria-label="Campaign grid" className="mt-16 w-full">
-                <ul className="m-0 grid list-none grid-cols-1 place-items-center justify-items-center gap-y-2 gap-x-0 p-0 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-2 lg:grid-cols-3 lg:gap-x-[10px] lg:gap-y-[10px]">
-                  <li className="col-span-full grid w-full max-w-none grid-cols-1 justify-self-stretch sm:grid-cols-2 sm:gap-x-6 lg:grid-cols-3 lg:gap-x-[10px]">
-                    <div className="col-span-1 flex w-full justify-center sm:col-start-2 lg:col-start-3">
-                      <div className="flex w-[330px] max-w-full justify-end">
-                        <Link
-                          href="/dashboard/campaigns/new"
-                          className="rounded-none bg-neutral-200/90 px-4 py-1.5 text-[13px] font-medium text-neutral-800 shadow-sm transition hover:bg-neutral-200"
-                        >
-                          Add Campaign +
-                        </Link>
+                {list.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-24">
+                    <p className={`text-3xl font-light tracking-tight text-center ${HERO_TEXT_CLASS}`}>
+                      Du har ingen kampanjer ennå.
+                    </p>
+                    <p className={`text-3xl font-light tracking-tight text-center mt-2 ${HERO_TEXT_CLASS}`}>
+                      Vil du starte en?
+                    </p>
+                    <Link
+                      href="/dashboard/campaigns/new"
+                      className="mt-8 rounded-md bg-neutral-800 px-6 py-3 text-[15px] font-medium text-white shadow-sm transition hover:bg-neutral-700"
+                    >
+                      Lag kampanje
+                    </Link>
+                  </div>
+                ) : (
+                  <ul className="m-0 grid list-none grid-cols-1 place-items-center justify-items-center gap-y-2 gap-x-0 p-0 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-2 lg:grid-cols-3 lg:gap-x-[10px] lg:gap-y-[10px]">
+                    <li className="col-span-full grid w-full max-w-none grid-cols-1 justify-self-stretch sm:grid-cols-2 sm:gap-x-6 lg:grid-cols-3 lg:gap-x-[10px]">
+                      <div className="col-span-1 flex w-full justify-center sm:col-start-2 lg:col-start-3">
+                        <div className="flex w-[330px] max-w-full justify-end">
+                          <Link
+                            href="/dashboard/campaigns/new"
+                            className="rounded-none bg-neutral-200/90 px-4 py-1.5 text-[13px] font-medium text-neutral-800 shadow-sm transition hover:bg-neutral-200"
+                          >
+                            Add Campaign +
+                          </Link>
+                        </div>
                       </div>
-                    </div>
-                  </li>
-                  {list.map((c) => (
-                    <li key={c.id}>
-                      <CampaignCard
-                        id={c.id}
-                        name={c.name}
-                        imageUrl={c.imageUrl}
-                      />
                     </li>
-                  ))}
-                </ul>
+                    {list.map((c) => (
+                      <li key={c.id}>
+                        <CampaignCard
+                          id={c.id}
+                          name={c.name}
+                          imageUrl={c.imageUrl}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
             </div>
           </div>
